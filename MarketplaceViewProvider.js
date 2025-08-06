@@ -1,6 +1,7 @@
 const vscode = require('vscode');
 const axios = require('axios');
-const { installExtension } = require('./extension'); 
+// Removed: const { installExtension } = require('./extension'); 
+// installExtension will now be passed via the constructor
 
 class MarketplaceViewProvider {
     /**
@@ -14,6 +15,15 @@ class MarketplaceViewProvider {
         this._installExtension = installExtensionFunction; // Store the passed function
         this._view = null; // Reference to the webview panel
         this._disposables = []; // To manage event listeners
+        this._onDidResolveWebviewViewCallbacks = []; // Callbacks for when _view is resolved
+    }
+
+    /**
+     * Registers a callback to be called when the webview view is resolved.
+     * @param {function(vscode.WebviewView): void} callback
+     */
+    onDidResolveWebviewView(callback) {
+        this._onDidResolveWebviewViewCallbacks.push(callback);
     }
 
     /**
@@ -24,6 +34,9 @@ class MarketplaceViewProvider {
      */
     resolveWebviewView(webviewView, context, _token) {
         this._view = webviewView;
+
+        // Call any registered callbacks now that _view is available
+        this._onDidResolveWebviewViewCallbacks.forEach(callback => callback(this._view));
 
         // Set options for the webview
         webviewView.webview.options = {
