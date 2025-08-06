@@ -20,7 +20,7 @@ The **VSCode Marketplace Extensions Installer** is a powerful VS Code extension 
 
 ## 📋 Requirements
 
-* **Python 3.x:** This extension requires a Python 3.x installation on your system, as it uses Python for its core installation logic. The extension will attempt to find `python3` or `python` in your PATH.
+* **Python 3.x:** This extension requires a Python 3.x installation on your system, as it uses Python for its core installation logic. The extension will attempt to find `python3` or `python` in your PATH (if not shipped by default with the python binary, `python3-venv` should also be installed).
 
 ## ⬇️ How Downloads Work
 
