@@ -2,7 +2,7 @@
   "name": "marketplace-installer",
   "displayName": "VSCode Marketplace Extensions Installer",
   "description": "Allows for the installation of extensions from the VS Code Marketplace in Codium IDEs.",
-  "version": "0.1.2.1",
+  "version": "0.1.3",
   "publisher": "cooligula",
   "icon": "icon.png",
   "files": [
