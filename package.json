@@ -1,35 +1,66 @@
 {
   "name": "marketplace-installer",
   "displayName": "VSCode Marketplace Extensions Installer",
-  "description": "Installs extensions from the VSCode Marketplace.",
-  "version": "0.0.1",
+  "description": "Installs extensions from the VS Code Marketplace.",
+  "version": "0.1.0",
+  "publisher": "cooligula",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/your-repo-name.git"
+  },
   "engines": {
-    "vscode": "^1.102.0"
+    "vscode": "^1.75.0"
   },
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onView:marketplace-installer.view"
+  ],
   "main": "./extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "marketplace-installer-sidebar",
+          "title": "Marketplace Installer",
+          "icon": "$(cloud-download)"
+        }
+      ]
+    },
+    "views": {
+      "marketplace-installer-sidebar": [
+        {
+          "type": "webview",
+          "id": "marketplace-installer.view",
+          "name": "Marketplace Search"
+        }
+      ]
+    },
     "commands": [
       {
-        "command": "marketplace-installer.installExtension",
-        "title": "Marketplace: Install VS Code Extension"
+        "command": "marketplace-installer.installFromInput",
+        "title": "Marketplace: Install VS Code Extension by ID"
       }
     ]
   },
   "scripts": {
     "lint": "eslint .",
     "pretest": "npm run lint",
-    "test": "vscode-test"
+    "test": "node ./test/runTest.js"
   },
   "devDependencies": {
-    "@types/vscode": "^1.102.0",
-    "@types/mocha": "^10.0.10",
-    "@types/node": "20.x",
-    "eslint": "^9.25.1",
-    "@vscode/test-cli": "^0.0.11",
-    "@vscode/test-electron": "^2.5.2"
+    "@types/vscode": "^1.75.0",
+    "@types/glob": "^8.0.1",
+    "@types/mocha": "^10.0.1",
+    "@types/node": "16.x",
+    "eslint": "^8.28.0",
+    "glob": "^8.0.3",
+    "mocha": "^10.1.0",
+    "typescript": "^4.9.3",
+    "@vscode/test-electron": "^2.2.0"
+  },
+  "dependencies": {
+    "axios": "^1.2.1"
   }
 }

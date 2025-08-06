@@ -2,42 +2,44 @@ const vscode = require('vscode');
 const { exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+// MarketplaceViewProvider is still required here
+const { MarketplaceViewProvider } = require('./MarketplaceViewProvider');
 
 // --- Helper Functions ---
 
 /**
- * Gets the platform-specific path to the python executable in the venv.
- * @param {string} venvPath - The path to the virtual environment directory.
- * @returns {string} The path to the pip executable.
+ * Determines the correct Python executable path within a virtual environment.
+ * @param {string} venvPath The path to the virtual environment.
+ * @returns {string} The full path to the Python executable.
  */
 function getPythonCommand(venvPath) {
-    return process.platform === 'win32'
-        ? path.join(venvPath, 'Scripts', 'python.exe')
-        : path.join(venvPath, 'bin', 'python');
+    return process.platform === 'win32' ?
+        path.join(venvPath, 'Scripts', 'python.exe') :
+        path.join(venvPath, 'bin', 'python');
 }
 
 /**
- * Gets the platform-specific path to the vsix-to-vscodium executable in the venv.
- * @param {string} venvPath - The path to the virtual environment directory.
- * @returns {string} The path to the executable.
+ * Determines the correct vsix-to-vscodium installer executable path within a virtual environment.
+ * @param {string} venvPath The path to the virtual environment.
+ * @returns {string} The full path to the installer executable.
  */
 function getInstallerCommand(venvPath) {
-    return process.platform === 'win32'
-        ? path.join(venvPath, 'Scripts', 'vsix-to-vscodium.exe')
-        : path.join(venvPath, 'bin', 'vsix-to-vscodium');
+    return process.platform === 'win32' ?
+        path.join(venvPath, 'Scripts', 'vsix-to-vscodium.exe') :
+        path.join(venvPath, 'bin', 'vsix-to-vscodium');
 }
 
 /**
- * Executes a shell command and returns a promise.
- * @param {string} command - The command to execute.
- * @param {object} [options] - Options for child_process.exec.
- * @returns {Promise<{stdout: string, stderr: string}>}
+ * Executes a shell command and returns a Promise.
+ * @param {string} command The command to execute.
+ * @param {import('child_process').ExecOptions} [options] Options for the child process.
+ * @returns {Promise<{stdout: string, stderr: string}>} A promise that resolves with stdout/stderr or rejects with an error.
  */
 function execPromise(command, options) {
     return new Promise((resolve, reject) => {
         exec(command, options, (error, stdout, stderr) => {
             if (error) {
-                // Also include stderr in the rejection for more context
+                // Append stderr to error message for better debugging
                 error.message += `\n${stderr}`;
                 reject(error);
                 return;
@@ -48,8 +50,9 @@ function execPromise(command, options) {
 }
 
 /**
- * Checks for a valid python command (python3 or python).
- * @returns {Promise<string>} The valid python command.
+ * Finds the correct Python command ('python3' or 'python') available on the system.
+ * @returns {Promise<string>} A promise that resolves with the Python command.
+ * @throws {Error} If Python is not found.
  */
 async function findPython() {
     try {
@@ -65,137 +68,151 @@ async function findPython() {
     }
 }
 
-
 /**
- * Ensures the Python virtual environment and dependencies are set up.
- * @param {string} storagePath - The path to the extension's global storage.
- * @returns {Promise<string>} The path to the vsix-to-vscodium executable.
+ * Ensures that the Python virtual environment and `vsix-to-vscodium` are set up.
+ * This runs as a progress notification.
+ * @param {string} storagePath The global storage path for the extension.
+ * @returns {Promise<string>} A promise that resolves with the path to the installer command.
  */
 async function ensureDependencies(storagePath) {
     const venvPath = path.join(storagePath, '.venv');
     const installerPath = getInstallerCommand(venvPath);
 
+    // Check if installer already exists to avoid unnecessary setup
     if (fs.existsSync(installerPath)) {
-        console.log('Dependencies are already installed.');
+        console.log('vsix-to-vscodium already installed.');
         return installerPath;
     }
 
-    // If not installed, show a progress notification for the one-time setup.
     return await vscode.window.withProgress({
         location: vscode.ProgressLocation.Notification,
-        title: 'Setting up Python environment for Marketplace Installer...',
-        cancellable: false
+        title: 'Setting up Marketplace Installer dependencies...',
+        cancellable: false // User cannot cancel this essential setup
     }, async (progress) => {
         try {
-            // 1. Find a valid python command
             const pythonCmd = await findPython();
-            
-            // 2. Create the virtual environment
-            progress.report({ message: 'Creating virtual environment...' });
-            await execPromise(`${pythonCmd} -m venv ${venvPath}`);
+            progress.report({ message: 'Creating Python virtual environment...' });
+            // Create virtual environment
+            await execPromise(`${pythonCmd} -m venv "${venvPath}"`);
 
-            // 3. Install the package using the venv's pip
-            progress.report({ message: 'Installing vsix-to-vscodium...' });
+            progress.report({ message: 'Installing vsix-to-vscodium tool...' });
             const venvPython = getPythonCommand(venvPath);
+            // Install vsix-to-vscodium into the virtual environment
             await execPromise(`"${venvPython}" -m pip install vsix-to-vscodium`);
 
-            vscode.window.showInformationMessage('Marketplace Installer setup complete!');
+            vscode.window.showInformationMessage('Marketplace Installer setup complete! You can now search and install extensions.');
             return installerPath;
-
         } catch (error) {
             vscode.window.showErrorMessage(`Failed to set up Python dependencies: ${error.message}`);
-            // Re-throw the error to be caught by the calling function.
+            // Re-throw the error so the promise chain can handle it
             throw error;
         }
     });
 }
 
-
-// --- Activation ---
-
 /**
- * @param {vscode.ExtensionContext} context
+ * The core installation logic for a VS Code extension using vsix-to-vscodium.
+ * This function is called from both the command palette and the webview.
+ * @param {string} extensionId The full ID of the extension to install (e.g., 'publisher.extension-name').
+ * @param {string} installerCmd The path to the vsix-to-vscodium executable.
  */
-async function activate(context) {
-    // Get the global storage path, which is a persistent location for this extension.
-    const storagePath = context.globalStorageUri.fsPath;
-    if (!fs.existsSync(storagePath)) {
-        fs.mkdirSync(storagePath, { recursive: true });
+async function installExtension(extensionId, installerCmd) {
+    if (!extensionId || !installerCmd) {
+        vscode.window.showErrorMessage('Installation failed: Missing extension ID or installer command path.');
+        return;
     }
 
-    // We will run the setup on activation, but lazily. The actual installation
-    // will only happen when the command is first run. We store the promise.
-    let dependencySetupPromise = ensureDependencies(storagePath);
-    
-    // Handle cases where the setup fails initially.
-    dependencySetupPromise.catch(err => {
-        console.error("Initial dependency check failed.", err);
-        // Allow the user to retry by re-running the command.
-        dependencySetupPromise = null; 
-    });
-
-    let disposable = vscode.commands.registerCommand('marketplace-installer.installExtension', async function () {
+    await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: `Installing "${extensionId}"...`,
+        cancellable: false
+    }, async () => {
         try {
-            // If the initial setup failed, try again.
-            if (!dependencySetupPromise) {
-                 dependencySetupPromise = ensureDependencies(storagePath);
+            // Execute the vsix-to-vscodium install command
+            // Corrected command: Removed 'install' keyword based on user feedback
+            const command = `"${installerCmd}" ${extensionId}`;
+            console.log(`Executing installation command: ${command}`); // Debugging
+            const { stdout, stderr } = await execPromise(command);
+
+            if (stderr) {
+                console.warn(`Installation produced warnings/errors: ${stderr}`);
             }
-            // Wait for the setup to complete and get the path to the executable.
-            const installerCmd = await dependencySetupPromise;
+            console.log(`Installation stdout: ${stdout}`); // Debugging
 
-            const extensionId = await vscode.window.showInputBox({
-                prompt: 'Enter the Visual Studio Marketplace extension ID',
-                placeHolder: 'e.g., publisher.extension-name (like ms-python.python)',
-                validateInput: text => /^[a-z0-9-]+\.[a-z0-9-]+$/i.test(text) ? null : 'Invalid format. Use "publisher.extension-name".'
-            });
-
-            if (!extensionId) {
-                vscode.window.showInformationMessage('Installation cancelled.');
-                return;
-            }
-
-            await vscode.window.withProgress({
-                location: vscode.ProgressLocation.Notification,
-                title: `Installing "${extensionId}"...`,
-                cancellable: false
-            }, async () => {
-                try {
-                    // Use the full path to the executable from our venv
-                    const command = `"${installerCmd}" ${extensionId}`;
-                    const { stdout, stderr } = await execPromise(command);
-                    
-                    if (stderr) {
-                        // Log warnings but don't necessarily fail
-                        console.warn(`Installation produced warnings: ${stderr}`);
-                    }
-                    console.log(`stdout: ${stdout}`);
-                    
-                    vscode.window.showInformationMessage(
-                        `Successfully installed "${extensionId}"! Please reload to activate.`,
-                        'Reload Window'
-                    ).then(selection => {
-                        if (selection === 'Reload Window') {
-                            vscode.commands.executeCommand('workbench.action.reloadWindow');
-                        }
-                    });
-
-                } catch (error) {
-                    vscode.window.showErrorMessage(`Installation Failed: ${error.message}`);
+            vscode.window.showInformationMessage(
+                `Successfully installed "${extensionId}"! Please reload your Codium window to activate the extension.`,
+                'Reload Window' // Button text
+            ).then(selection => {
+                if (selection === 'Reload Window') {
+                    vscode.commands.executeCommand('workbench.action.reloadWindow');
                 }
             });
 
         } catch (error) {
-            // This catches errors from ensureDependencies if it fails.
-            vscode.window.showErrorMessage(`Could not run installer: ${error.message}`);
+            console.error(`Error during installation of ${extensionId}:`, error); // Debugging
+            vscode.window.showErrorMessage(`Installation Failed for "${extensionId}": ${error.message}`);
         }
     });
-
-    context.subscriptions.push(disposable);
 }
 
-function deactivate() {}
 
+// --- Extension Activation ---
+
+/**
+ * Called when the extension is activated.
+ * @param {vscode.ExtensionContext} context
+ */
+async function activate(context) {
+    console.log('Marketplace Installer extension is activating...');
+
+    // Ensure the global storage directory exists for the virtual environment
+    const storagePath = context.globalStorageUri.fsPath;
+    if (!fs.existsSync(storagePath)) {
+        fs.mkdirSync(storagePath, { recursive: true });
+        console.log(`Created storage directory: ${storagePath}`);
+    }
+
+    // Start the dependency setup. This promise will resolve with the installer command path.
+    // The view provider will await this promise before attempting installations.
+    let dependencySetupPromise = ensureDependencies(storagePath);
+
+    // Create and register the sidebar webview view provider
+    // Pass the installExtension function directly to the provider
+    const provider = new MarketplaceViewProvider(context.extensionUri, dependencySetupPromise, installExtension);
+    context.subscriptions.push(
+        vscode.window.registerWebviewViewProvider("marketplace-installer.view", provider)
+    );
+    console.log('MarketplaceViewProvider registered.');
+
+    // Register a command palette command as an alternative way to install
+    context.subscriptions.push(vscode.commands.registerCommand('marketplace-installer.installFromInput', async () => {
+        try {
+            const installerCmd = await dependencySetupPromise; // Await the installer path
+            const extensionId = await vscode.window.showInputBox({
+                prompt: 'Enter the Visual Studio Marketplace extension ID',
+                placeHolder: 'e.g., publisher.extension-name'
+            });
+            if (extensionId) {
+                await installExtension(extensionId, installerCmd);
+            }
+        } catch (error) {
+            vscode.window.showErrorMessage(`Could not run installer: ${error.message}`);
+            console.error('Error from installFromInput command:', error);
+        }
+    }));
+    console.log('Command "marketplace-installer.installFromInput" registered.');
+}
+
+/**
+ * Called when the extension is deactivated.
+ */
+function deactivate() {
+    console.log('Marketplace Installer extension deactivated.');
+}
+
+// Export functions for VS Code to use
 module.exports = {
     activate,
-    deactivate
-}
+    deactivate,
+    installExtension // Exported for potential direct use or testing
+};

@@ -1,0 +1,133 @@
+/* Basic styling for the webview to match VS Code's theme */
+body {
+    font-family: var(--vscode-font-family);
+    font-size: var(--vscode-font-size);
+    color: var(--vscode-foreground);
+    background-color: var(--vscode-editor-background);
+    padding: 15px;
+    margin: 0;
+}
+
+h1 {
+    color: var(--vscode-editor-foreground);
+    font-size: 1.5em;
+    margin-bottom: 20px;
+}
+
+.search-container {
+    display: flex;
+    margin-bottom: 20px;
+}
+
+#search-input {
+    flex-grow: 1;
+    padding: 8px 10px;
+    border: 1px solid var(--vscode-input-border);
+    background-color: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    border-radius: 4px 0 0 4px;
+    font-size: 0.9em;
+}
+
+#search-input:focus {
+    outline: 1px solid var(--vscode-focusBorder);
+    border-color: var(--vscode-focusBorder);
+}
+
+#search-button {
+    padding: 8px 15px;
+    border: 1px solid var(--vscode-button-background);
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    cursor: pointer;
+    border-radius: 0 4px 4px 0;
+    font-size: 0.9em;
+    white-space: nowrap; /* Prevent button text from wrapping */
+}
+
+#search-button:hover {
+    background-color: var(--vscode-button-hoverBackground);
+}
+
+#results-container {
+    margin-top: 10px;
+}
+
+#results-container ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.extension-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--vscode-editorGroup-border);
+    gap: 15px; /* Space between flex items */
+}
+
+.extension-item:last-child {
+    border-bottom: none; /* No border for the last item */
+}
+
+.extension-icon {
+    width: 48px;
+    height: 48px;
+    min-width: 48px; /* Ensure icon doesn't shrink */
+    object-fit: contain;
+    border-radius: 4px; /* Slightly rounded corners for icons */
+    background-color: var(--vscode-editorWidget-background); /* Background for placeholder */
+}
+
+.extension-details {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.extension-details h3 {
+    margin: 0 0 4px 0;
+    font-size: 1.1em;
+    color: var(--vscode-editor-foreground);
+}
+
+.publisher, .description {
+    margin: 0;
+    font-size: 0.85em;
+    color: var(--vscode-editorCodeLens-foreground); /* Lighter text for metadata */
+    opacity: 0.8;
+    line-height: 1.3;
+}
+
+.description {
+    margin-top: 5px;
+}
+
+.install-button {
+    margin-left: auto; /* Pushes the button to the right */
+    padding: 6px 12px;
+    border: 1px solid var(--vscode-button-background);
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 0.9em;
+    white-space: nowrap;
+}
+
+.install-button:hover {
+    background-color: var(--vscode-button-hoverBackground);
+}
+
+.error {
+    color: var(--vscode-errorForeground);
+    font-weight: bold;
+}
+
+#info-message {
+    color: var(--vscode-editorInfo-foreground);
+    font-style: italic;
+    text-align: center;
+    padding: 20px;
+}
