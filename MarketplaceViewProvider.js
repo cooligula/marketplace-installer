@@ -1,6 +1,5 @@
 const vscode = require('vscode');
 const axios = require('axios');
-// Import installExtension from extension.js
 const { installExtension } = require('./extension'); 
 
 class MarketplaceViewProvider {
@@ -79,8 +78,6 @@ class MarketplaceViewProvider {
         this._view.webview.postMessage({ type: 'setLoading' }); // Inform webview to show loading state
 
         try {
-            // This is an unofficial, internal API endpoint used by VS Code itself.
-            // It may change without notice. Using a specific API version for stability.
             const response = await axios.post('https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery', {
                 filters: [{
                     criteria: [{
@@ -102,13 +99,17 @@ class MarketplaceViewProvider {
             const results = response.data.results[0].extensions;
             console.log(`MarketplaceViewProvider: Found ${results.length} extensions.`); // Debugging
 
-            // Map results to a simpler format for the webview
+            // Get currently installed extensions to check against search results
+            const installedExtensions = vscode.extensions.all.map(ext => ext.id.toLowerCase());
+
+            // Map results to a simpler format for the webview and add installation status
             const formattedExtensions = results.map(ext => ({
                 displayName: ext.displayName,
                 publisherDisplayName: ext.publisher.displayName,
                 shortDescription: ext.shortDescription,
                 extensionId: `${ext.publisher.publisherName}.${ext.extensionName}`, // Full ID for installation
-                iconUrl: ext.versions[0]?.files?.find(f => f.assetType === 'Microsoft.VisualStudio.Services.Icons.Default')?.source || '' // Get default icon
+                iconUrl: ext.versions[0]?.files?.find(f => f.assetType === 'Microsoft.VisualStudio.Services.Icons.Default')?.source || '', // Get default icon
+                isInstalled: installedExtensions.includes(`${ext.publisher.publisherName}.${ext.extensionName}`.toLowerCase()) // Check if installed
             }));
 
             this._view.webview.postMessage({ type: 'showResults', value: formattedExtensions });
@@ -123,8 +124,7 @@ class MarketplaceViewProvider {
                     } else if (error.response.status === 400) {
                         errorMessage = 'Invalid search request. The marketplace API might have changed its expected parameters.';
                     } else if (error.response.status === 500) {
-                        // More specific message for timeout
-                        errorMessage = 'Marketplace API timed out. Try a more specific search term or try again later.';
+                        errorMessage = 'Internal server error from Marketplace API. Please try again later.';
                     }
                 } else if (error.request) {
                     errorMessage = 'Network error during search. Check your internet connection.';

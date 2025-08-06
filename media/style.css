@@ -47,7 +47,7 @@ h1 {
 }
 
 #search-button:hover {
-    background-color: var(--vscode-button-hoverBackground); /* Corrected hover background variable */
+    background-color: var(--vscode-button-hoverBackground);
 }
 
 #results-container {
@@ -86,8 +86,8 @@ h1 {
     flex-shrink: 1; /* Allows it to shrink if needed */
     display: flex;
     flex-direction: column;
-    /* Added max-width to ensure button always has space */
-    max-width: calc(100% - 48px - 15px - 80px); /* Total width - icon width - gap - estimated button width */
+    /* Adjusted max-width to account for fixed button width */
+    max-width: calc(100% - 48px - 15px - 90px); /* Total width - icon width - gap - fixed button width (90px) */
     overflow: hidden; /* Hide overflowing text */
 }
 
@@ -161,7 +161,8 @@ h1 {
     white-space: nowrap;
     transition: background-color 0.2s ease; /* Smooth hover effect */
     flex-shrink: 0; /* Ensures the button doesn't shrink */
-    /* align-self: center; is implicitly handled by parent's align-items: center */
+    width: 70px; /* Set a fixed width to ensure consistency */
+    text-align: center; /* Center text within the button */
 }
 
 .install-button:hover {

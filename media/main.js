@@ -107,12 +107,23 @@
 
 
             const installButton = document.createElement('button');
-            installButton.textContent = 'Install';
             installButton.className = 'install-button';
-            installButton.addEventListener('click', () => {
-                console.log('Webview: Install button clicked. Sending "install" message for:', ext.extensionId); // Debugging
-                vscode.postMessage({ type: 'install', value: ext.extensionId });
-            });
+            
+            // Check if extension is installed and update button
+            if (ext.isInstalled) {
+                installButton.textContent = 'Installed';
+                installButton.disabled = true;
+                installButton.style.backgroundColor = 'var(--vscode-button-secondaryBackground)'; // A different background for installed
+                installButton.style.color = 'var(--vscode-button-secondaryForeground)'; // Different text color
+                installButton.style.cursor = 'default'; // No pointer cursor
+            } else {
+                installButton.textContent = 'Install';
+                installButton.disabled = false;
+                installButton.addEventListener('click', () => {
+                    console.log('Webview: Install button clicked. Sending "install" message for:', ext.extensionId); // Debugging
+                    vscode.postMessage({ type: 'install', value: ext.extensionId });
+                });
+            }
             
             details.appendChild(name);
             details.appendChild(publisherCode); // Append code first
