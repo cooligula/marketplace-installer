@@ -209,10 +209,6 @@ async function activate(context) {
         })
     );
     
-    // The _view property is set by the resolveWebviewView method when the webview is activated/shown.
-    // We need to wait for that to happen to get the reference.
-    // A simple way is to expose a method on the provider to get the view or set it globally.
-    // For now, let's ensure the provider's resolveWebviewView updates this global reference.
     provider.onDidResolveWebviewView((resolvedView) => {
         _webviewViewReference = resolvedView;
         console.log('WebviewView reference set for communication.');
@@ -251,5 +247,5 @@ function deactivate() {
 module.exports = {
     activate,
     deactivate,
-    installExtension // Exported for potential direct use or testing
+    installExtension
 };
