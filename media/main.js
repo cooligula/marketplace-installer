@@ -85,16 +85,19 @@
             const name = document.createElement('h3');
             name.textContent = ext.displayName;
 
-            const publisher = document.createElement('p');
-            publisher.className = 'publisher';
-            publisher.textContent = ext.publisherDisplayName;
+            const publisherCode = document.createElement('p');
+            publisherCode.className = 'publisher-code'; // New class for the code part
+            publisherCode.innerHTML = `<code>${ext.extensionId}</code>`;
+
+            const publisherName = document.createElement('p');
+            publisherName.className = 'publisher-name'; // New class for the publisher name
+            publisherName.textContent = ext.publisherDisplayName;
 
             const description = document.createElement('p');
             description.className = 'description';
             // Limit description to 2 lines and add ellipsis if longer
             const maxLines = 2;
-            const lineHeight = 1.3; // Based on CSS line-height for .description
-            description.style.maxHeight = `${maxLines * lineHeight}em`;
+            description.style.maxHeight = `${maxLines * 1.3}em`; // Using 1.3 as line-height from CSS
             description.style.overflow = 'hidden';
             description.style.textOverflow = 'ellipsis';
             description.style.display = '-webkit-box';
@@ -112,7 +115,8 @@
             });
             
             details.appendChild(name);
-            details.appendChild(publisher);
+            details.appendChild(publisherCode); // Append code first
+            details.appendChild(publisherName); // Then author name
             details.appendChild(description);
 
             li.appendChild(icon);
