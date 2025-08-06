@@ -84,6 +84,9 @@ async function ensureDependencies(storagePath, extensionPath) {
     // Path to the local vsix-to-vscodium source directory
     const vsixToVscodiumSourcePath = path.join(extensionPath, 'python_src', 'vsix-to-vscodium');
 
+    // Log the venvPath for easier debugging/manual deletion
+    console.log(`Checking for existing virtual environment at: ${venvPath}`);
+
     // Check if installer already exists to avoid unnecessary setup
     if (fs.existsSync(installerPath)) {
         console.log('vsix-to-vscodium already installed.');
@@ -209,11 +212,7 @@ async function activate(context) {
     // The _view property is set by the resolveWebviewView method when the webview is activated/shown.
     // We need to wait for that to happen to get the reference.
     // A simple way is to expose a method on the provider to get the view or set it globally.
-    // For simplicity and direct access, we'll ensure the provider sets the global reference.
-    // This is a bit of a workaround; a more robust solution might involve an event emitter.
     // For now, let's ensure the provider's resolveWebviewView updates this global reference.
-    // The provider's constructor now receives `installExtension`, but it also needs to expose its `_view`.
-    // Let's modify MarketplaceViewProvider to set this global reference when its view is resolved.
     provider.onDidResolveWebviewView((resolvedView) => {
         _webviewViewReference = resolvedView;
         console.log('WebviewView reference set for communication.');
