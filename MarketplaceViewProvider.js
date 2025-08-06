@@ -1,7 +1,7 @@
 const vscode = require('vscode');
 const axios = require('axios');
-// Removed: const { installExtension } = require('./extension'); 
-// installExtension will now be passed via the constructor
+// Import installExtension from extension.js
+const { installExtension } = require('./extension'); 
 
 class MarketplaceViewProvider {
     /**
@@ -84,15 +84,17 @@ class MarketplaceViewProvider {
             const response = await axios.post('https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery', {
                 filters: [{
                     criteria: [{
-                        filterType: 10, // Changed filterType to 10 (Search Text)
+                        filterType: 10, // Keeping filterType at 10 (Search Text)
                         value: query
-                    }]
+                    }],
+                    pageNumber: 1, // Added pagination: Request the first page
+                    pageSize: 50   // Added pagination: Request 50 results per page
                 }],
-                flags: 71 // Changed flags to 71 (more comprehensive flags for search results)
+                flags: 71 // Reverted flags to 71 for a more stable set of data
             }, {
                 headers: {
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json;api-version=6.0-preview.1', // Updated API version
+                    'Accept': 'application/json;api-version=6.0-preview.1', // Keeping updated API version
                     'User-Agent': 'VSCode Marketplace' // Mimic VS Code's user agent
                 }
             });
@@ -114,12 +116,19 @@ class MarketplaceViewProvider {
         } catch (error) {
             console.error('MarketplaceViewProvider: Marketplace search failed:', error); // Debugging
             let errorMessage = 'Search failed. Please check your internet connection or try a different search term.';
-            if (error.response && error.response.status === 404) {
-                errorMessage = 'Marketplace API endpoint not found or changed. This extension may need an update.';
-            } else if (error.message.includes('Network Error')) {
-                errorMessage = 'Network error during search. Check your internet connection.';
-            } else if (error.response && error.response.status === 400) { // Specific handling for 400 Bad Request
-                errorMessage = 'Invalid search request. The marketplace API might have changed its expected parameters.';
+            if (axios.isAxiosError(error)) {
+                if (error.response) {
+                    if (error.response.status === 404) {
+                        errorMessage = 'Marketplace API endpoint not found or changed. This extension may need an update.';
+                    } else if (error.response.status === 400) {
+                        errorMessage = 'Invalid search request. The marketplace API might have changed its expected parameters.';
+                    } else if (error.response.status === 500) {
+                        // More specific message for timeout
+                        errorMessage = 'Marketplace API timed out. Try a more specific search term or try again later.';
+                    }
+                } else if (error.request) {
+                    errorMessage = 'Network error during search. Check your internet connection.';
+                }
             }
             vscode.window.showErrorMessage(`Marketplace search failed: ${errorMessage}`);
             this._view.webview.postMessage({ type: 'showError', value: errorMessage });
