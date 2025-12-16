@@ -1,0 +1,44 @@
+name: Build VSIX (Rolling Release)
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Package Extension
+        # 1. Build the file
+        run: npx @vscode/vsce package
+
+      - name: Rename Output
+        # 2. Rename 'my-ext-0.1.3.vsix' to a static name 'marketplace-installer.vsix'
+        run: mv *.vsix marketplace-installer.vsix
+
+      - name: Update "Latest" Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: latest
+          name: "Latest Build"
+          files: marketplace-installer.vsix # Uploads the static filename
+          prerelease: false
+          draft: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Uses the auto-generated token
